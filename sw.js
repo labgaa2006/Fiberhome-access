@@ -1,4 +1,4 @@
-const CACHE = 'fiberhome-v1';
+const CACHE = 'fiberhome-v2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {
@@ -16,19 +16,19 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-    // Network-first for Google Fonts, cache-first for everything else
-    const url = new URL(e.request.url);
-    if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
+    // Network-first دائماً لـ index.html
+    if (e.request.url.endsWith('index.html') || e.request.url.endsWith('/')) {
         e.respondWith(
-            caches.open(CACHE).then(cache =>
-                fetch(e.request).then(res => { cache.put(e.request, res.clone()); return res; })
-                .catch(() => caches.match(e.request))
-            )
+            fetch(e.request).then(res => {
+                const clone = res.clone();
+                caches.open(CACHE).then(c => c.put(e.request, clone));
+                return res;
+            }).catch(() => caches.match(e.request))
         );
         return;
     }
+    // Cache-first لباقي الملفات
     e.respondWith(
         caches.match(e.request).then(cached => cached || fetch(e.request))
-        .catch(() => caches.match('./index.html'))
     );
 });
