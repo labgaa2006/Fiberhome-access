@@ -1,0 +1,19 @@
+{
+  "name": "FiberHome LAGHOUAT DZ",
+  "short_name": "FiberHome",
+  "description": "Password generator for FiberHome routers - LAGHOUAT DZ",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#080c14",
+  "theme_color": "#080c14",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
