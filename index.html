@@ -179,23 +179,6 @@ input.err{border-color:rgba(255,107,107,.5)!important;box-shadow:0 0 0 3px rgba(
 .wi-ssid{font-size:13px;font-weight:600;color:var(--text);}
 .wi-signal{font-size:10px;color:var(--muted);}
 
-/* CONNECT BTN */
-.btn-connect{
-    width:100%;margin-top:10px;
-    background:var(--surf2);
-    border:1px solid rgba(88,166,255,.3);
-    border-radius:var(--rsm);
-    color:var(--blue);
-    font-family:var(--font);font-size:12px;font-weight:700;
-    padding:13px;cursor:pointer;
-    letter-spacing:1px;text-transform:uppercase;
-    transition:all .2s;display:none;
-    align-items:center;justify-content:center;gap:8px;
-}
-.btn-connect.show{display:flex;}
-.btn-connect:hover{background:rgba(88,166,255,.08);}
-.btn-connect.connecting{opacity:.6;pointer-events:none;}
-
 /* GENERATE BTN */
 .btn-gen{
     width:100%;margin-top:16px;
@@ -338,9 +321,6 @@ footer{text-align:center;padding:20px 0 0;font-size:10px;color:var(--border);let
         <input type="text" id="result-field" readonly>
         <button class="btn-copy" id="copy-btn" onclick="copyResult()">📋 COPY</button>
     </div>
-    <button class="btn-connect" id="connect-btn" onclick="connectWifi()">
-        📶 Connect to WiFi
-    </button>
 </div>
 
 <!-- History -->
@@ -470,10 +450,7 @@ function generate(){
         document.getElementById('result-field').value=result;
         document.getElementById('copy-btn').textContent='📋 COPY';
         document.getElementById('copy-btn').className='btn-copy';
-        // Show connect button only in SSID mode
-        const connectBtn=document.getElementById('connect-btn');
-        if(currentMode==='ssid'){connectBtn.classList.add('show');connectBtn.textContent='📶 Connect to WiFi';connectBtn.style.color='';connectBtn.style.borderColor='';}
-        else connectBtn.classList.remove('show');
+        if(currentMode==='ssid'){lastPassword=result;}
         card.classList.remove('hidden');
         void card.offsetWidth;card.classList.add('fadein');
         saveHist(histKey,result);
