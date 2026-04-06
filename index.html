@@ -146,6 +146,56 @@ input.err{border-color:rgba(255,107,107,.5)!important;box-shadow:0 0 0 3px rgba(
 .mac-dot.filled{background:var(--accent);}
 .mac-dot.active{background:rgba(0,255,136,.4);}
 
+/* SCAN BTN */
+.btn-scan{
+    width:100%;margin-top:10px;
+    background:none;
+    border:1px solid rgba(0,255,136,.25);
+    border-radius:var(--rsm);
+    color:var(--accent);
+    font-family:var(--font);font-size:12px;font-weight:700;
+    padding:12px;cursor:pointer;
+    letter-spacing:1px;text-transform:uppercase;
+    transition:all .2s;display:none;
+    align-items:center;justify-content:center;gap:8px;
+}
+.btn-scan:hover{background:var(--adim);}
+.btn-scan.show{display:flex;}
+.btn-scan.scanning{opacity:.6;pointer-events:none;}
+
+/* WIFI LIST */
+.wifi-list{
+    margin-top:10px;display:none;
+    flex-direction:column;gap:6px;
+}
+.wifi-list.show{display:flex;}
+.wifi-item{
+    background:var(--surf2);border:1px solid var(--border);
+    border-radius:var(--rsm);padding:11px 14px;
+    cursor:pointer;transition:border-color .2s;
+    display:flex;align-items:center;justify-content:space-between;
+}
+.wifi-item:hover{border-color:var(--accent);}
+.wi-ssid{font-size:13px;font-weight:600;color:var(--text);}
+.wi-signal{font-size:10px;color:var(--muted);}
+
+/* CONNECT BTN */
+.btn-connect{
+    width:100%;margin-top:10px;
+    background:var(--surf2);
+    border:1px solid rgba(88,166,255,.3);
+    border-radius:var(--rsm);
+    color:var(--blue);
+    font-family:var(--font);font-size:12px;font-weight:700;
+    padding:13px;cursor:pointer;
+    letter-spacing:1px;text-transform:uppercase;
+    transition:all .2s;display:none;
+    align-items:center;justify-content:center;gap:8px;
+}
+.btn-connect.show{display:flex;}
+.btn-connect:hover{background:rgba(88,166,255,.08);}
+.btn-connect.connecting{opacity:.6;pointer-events:none;}
+
 /* GENERATE BTN */
 .btn-gen{
     width:100%;margin-top:16px;
@@ -255,6 +305,14 @@ footer{text-align:center;padding:20px 0 0;font-size:10px;color:var(--border);let
             maxlength="17">
     </div>
 
+    <!-- Scan WiFi button (SSID mode only) -->
+    <button class="btn-scan" id="btn-scan" onclick="scanWifi()">
+        📡 Scan FiberHome Networks
+    </button>
+
+    <!-- WiFi list -->
+    <div class="wifi-list" id="wifi-list"></div>
+
     <!-- MAC progress dots -->
     <div class="mac-progress" id="mac-progress">
         <div class="mac-dot" id="d0"></div>
@@ -280,6 +338,9 @@ footer{text-align:center;padding:20px 0 0;font-size:10px;color:var(--border);let
         <input type="text" id="result-field" readonly>
         <button class="btn-copy" id="copy-btn" onclick="copyResult()">📋 COPY</button>
     </div>
+    <button class="btn-connect" id="connect-btn" onclick="connectWifi()">
+        📶 Connect to WiFi
+    </button>
 </div>
 
 <!-- History -->
@@ -337,6 +398,8 @@ function setMode(mode){
         inp.classList.remove('has-prefix');
         prefix.classList.remove('show');
         document.getElementById('mac-progress').classList.remove('hidden');
+        document.getElementById('btn-scan').classList.remove('show');
+        document.getElementById('wifi-list').classList.remove('show');
         updateDots('');
     } else {
         document.getElementById('field-label').textContent='SSID';
@@ -345,6 +408,8 @@ function setMode(mode){
         inp.classList.add('has-prefix');
         prefix.classList.add('show');
         document.getElementById('mac-progress').classList.add('hidden');
+        document.getElementById('btn-scan').classList.add('show');
+        lastScannedSSID=null;
     }
     inp.focus();
 }
@@ -374,6 +439,9 @@ function updateDots(val){
 }
 
 /* GENERATE */
+let lastScannedSSID = null;
+let lastPassword = null;
+
 function generate(){
     const inp=document.getElementById('inp');
     const btn=document.getElementById('btn');
@@ -390,6 +458,8 @@ function generate(){
         result=ssidToWifi(full);
         if(!result){inp.classList.add('err');setTimeout(()=>inp.classList.remove('err'),1600);return;}
         label='WiFi Password';typeClass='wifi';histKey=full;
+        lastPassword=result;
+        if(!lastScannedSSID)lastScannedSSID=full;
     }
     btn.classList.add('loading');btn.disabled=true;
     setTimeout(()=>{
@@ -400,6 +470,10 @@ function generate(){
         document.getElementById('result-field').value=result;
         document.getElementById('copy-btn').textContent='📋 COPY';
         document.getElementById('copy-btn').className='btn-copy';
+        // Show connect button only in SSID mode
+        const connectBtn=document.getElementById('connect-btn');
+        if(currentMode==='ssid'){connectBtn.classList.add('show');connectBtn.textContent='📶 Connect to WiFi';connectBtn.style.color='';connectBtn.style.borderColor='';}
+        else connectBtn.classList.remove('show');
         card.classList.remove('hidden');
         void card.offsetWidth;card.classList.add('fadein');
         saveHist(histKey,result);
@@ -440,6 +514,66 @@ document.getElementById('inp').addEventListener('keydown',e=>{if(e.key==='Enter'
 
 /* INIT */
 renderHist();setMode('mac');
+
+/* WIFI SCAN & CONNECT */
+function isCapacitor(){return window.Capacitor&&window.Capacitor.isNativePlatform();}
+
+async function scanWifi(){
+    const btn=document.getElementById('btn-scan');
+    const list=document.getElementById('wifi-list');
+    btn.classList.add('scanning');
+    btn.innerHTML='⏳ Scanning...';
+    list.classList.remove('show');
+    if(!isCapacitor()){
+        // Demo for browser
+        showWifiList([{ssid:'fh_7baaaa',signal:-55},{ssid:'fh_3c2d1e',signal:-70},{ssid:'fh_a1b2c3_5g',signal:-65}]);
+        btn.classList.remove('scanning');btn.innerHTML='📡 Scan FiberHome Networks';
+        return;
+    }
+    try{
+        const {WifiPlugin}=window.Capacitor.Plugins;
+        const result=await WifiPlugin.scanNetworks();
+        showWifiList(result.networks||[]);
+    }catch(e){alert('Scan failed: '+e.message);}
+    finally{btn.classList.remove('scanning');btn.innerHTML='📡 Scan FiberHome Networks';}
+}
+
+function showWifiList(networks){
+    const list=document.getElementById('wifi-list');
+    if(!networks.length){
+        list.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:10px">No FiberHome networks found</div>';
+        list.classList.add('show');return;
+    }
+    networks.sort((a,b)=>b.signal-a.signal);
+    list.innerHTML=networks.map(n=>{
+        const bars=n.signal>-60?'▂▄▆█':n.signal>-75?'▂▄▆_':'▂▄__';
+        return`<div class="wifi-item" onclick="selectWifi('${n.ssid}')"><span class="wi-ssid">${n.ssid}</span><span class="wi-signal">${bars}</span></div>`;
+    }).join('');
+    list.classList.add('show');
+}
+
+function selectWifi(ssid){
+    lastScannedSSID=ssid;
+    document.getElementById('inp').value=ssid.replace(/^fh_/i,'');
+    document.getElementById('wifi-list').classList.remove('show');
+    generate();
+}
+
+async function connectWifi(){
+    if(!lastScannedSSID||!lastPassword)return;
+    const btn=document.getElementById('connect-btn');
+    if(!isCapacitor()){alert('Connect only works in APK');return;}
+    btn.classList.add('connecting');btn.textContent='⏳ Connecting...';
+    try{
+        const {WifiPlugin}=window.Capacitor.Plugins;
+        await WifiPlugin.connectToNetwork({ssid:lastScannedSSID,password:lastPassword});
+        btn.textContent='✅ Connected!';
+        btn.style.color='var(--accent)';btn.style.borderColor='rgba(0,255,136,.3)';
+    }catch(e){
+        btn.textContent='❌ Failed — try manually';
+        btn.classList.remove('connecting');
+    }
+}
 
 /* PWA */
 let deferredPrompt=null;
